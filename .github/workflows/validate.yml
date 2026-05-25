@@ -1,0 +1,132 @@
+name: Validate Buzz TV Skill
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate skill module structure
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required skill modules
+        run: |
+          echo "Checking Buzz TV skill module structure..."
+          required_files=(
+            "SKILL.md"
+            "personalities/ANCHORS.md"
+            "personalities/CREW.md"
+            "schedules/PROGRAMMING.md"
+            "segments/SEGMENTS.md"
+            "scenes/SCENES.md"
+            "director/DIRECTOR.md"
+            "graphics/GRAPHICS.md"
+            "ingestion/PIPELINE.md"
+            "memory/STATE.md"
+            "moderation/RULES.md"
+            "prompts/TEMPLATES.md"
+            "scripts/RUNTIME.md"
+          )
+          missing=0
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "MISSING: $file"
+              missing=$((missing + 1))
+            else
+              echo "OK: $file"
+            fi
+          done
+          if [ $missing -gt 0 ]; then
+            echo "$missing module(s) missing. All 13 are required for v1."
+            exit 1
+          fi
+          echo "All 13 skill modules present."
+
+      - name: Check agent roster completeness
+        run: |
+          echo "Checking all 9 agents are defined..."
+          agents=("Zara" "Dex" "Director" "Producer" "News Researcher" "Graphics Operator" "Clip Curator" "Community Manager" "DJ")
+          missing=0
+          for agent in "${agents[@]}"; do
+            if ! grep -q "$agent" personalities/ANCHORS.md personalities/CREW.md 2>/dev/null; then
+              echo "MISSING AGENT: $agent"
+              missing=$((missing + 1))
+            else
+              echo "OK: $agent"
+            fi
+          done
+          if [ $missing -gt 0 ]; then
+            echo "$missing agent(s) missing from personality files."
+            exit 1
+          fi
+
+      - name: Check runtime invariants are documented
+        run: |
+          echo "Checking runtime invariants in SKILL.md..."
+          invariant_count=$(grep -c "INVARIANT" SKILL.md || true)
+          if [ "$invariant_count" -lt 8 ]; then
+            echo "FAIL: Expected 8 invariants in SKILL.md, found $invariant_count"
+            exit 1
+          fi
+          echo "OK: $invariant_count invariants documented."
+
+      - name: Check .env.example is clean
+        run: |
+          echo "Checking .env.example for accidental secrets..."
+          if grep -E '^(NEWS_API_KEY|WEATHER_API_KEY|BUZZ_[A-Z_]+_KEY|ELEVENLABS_API_KEY|STABILITY_API_KEY)=.+' .env.example; then
+            echo "FAIL: .env.example contains what looks like a real key."
+            exit 1
+          fi
+          echo "OK: .env.example is clean."
+
+      - name: Check .env is gitignored
+        run: |
+          if git check-ignore -q .env; then
+            echo "OK: .env is gitignored."
+          else
+            echo "FAIL: .env is NOT in .gitignore."
+            exit 1
+          fi
+
+      - name: Check scene library completeness
+        run: |
+          echo "Checking scene library..."
+          scenes=("NEWS_DESK" "BREAKING_NEWS" "MARKET_BOARD" "SPORTS_DESK" "DEBATE_SPLIT" "CHILL_LOUNGE" "MUSIC_BREAK" "NIGHT_SHOW" "COMMUNITY_STAGE")
+          missing=0
+          for scene in "${scenes[@]}"; do
+            if ! grep -q "$scene" scenes/SCENES.md; then
+              echo "MISSING SCENE: $scene"
+              missing=$((missing + 1))
+            else
+              echo "OK: $scene"
+            fi
+          done
+          if [ $missing -gt 0 ]; then
+            echo "$missing scene(s) missing from SCENES.md"
+            exit 1
+          fi
+
+      - name: Check director 45-second rule is documented
+        run: |
+          if grep -q "45" director/DIRECTOR.md; then
+            echo "OK: 45-second rule present in DIRECTOR.md"
+          else
+            echo "FAIL: 45-second static frame rule missing from DIRECTOR.md"
+            exit 1
+          fi
+
+      - name: Summary
+        run: |
+          echo ""
+          echo "All checks passed."
+          echo "Buzz TV skill structure is valid and ready to broadcast."
+          echo ""
+          echo "Module count: $(find . -name '*.md' -not -path './.git/*' -not -path './docs/*' | wc -l | tr -d ' ') skill files"
+          echo "Agent count: 9"
+          echo "Scene count: 9"
