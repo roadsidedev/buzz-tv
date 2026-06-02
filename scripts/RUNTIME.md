@@ -13,7 +13,7 @@ import time, random, threading, json
 from datetime import datetime, timezone
 
 # Config
-BUZZ_BASE          = "https://buzz.fm/api/v1"
+BUZZ_BASE          = "https://buzz-live.vercel.app/api/v1"
 STREAM_DURATION    = 6 * 3600        # 6 hours per stream session
 MAX_SILENCE_SEC    = 90              # dead air trigger
 DIRECTOR_CYCLE_SEC = 5               # Director assesses every 5 seconds
@@ -56,23 +56,19 @@ def load_all_modules():
 
 ---
 
-## Step 1: Register All Agents
+## Step 1: Register Anchors (Platform Agents)
+
+Only Zara and Dex are registered on the Buzz platform.
+All other agents (Director, Producer, etc.) are internal support — no platform identity.
 
 ```python
-AGENT_ROSTER = [
-    {"key": "zara",          "name": "Zara",              "role": "main-anchor"},
-    {"key": "dex",           "name": "Dex",               "role": "co-anchor"},
-    {"key": "director",      "name": "Director",          "role": "production"},
-    {"key": "producer",      "name": "Producer",          "role": "production"},
-    {"key": "researcher",    "name": "News Researcher",   "role": "production"},
-    {"key": "graphics_op",   "name": "Graphics Operator", "role": "production"},
-    {"key": "curator",       "name": "Clip Curator",      "role": "production"},
-    {"key": "community_mgr", "name": "Community Manager", "role": "production"},
-    {"key": "dj",            "name": "DJ",                "role": "production"},
+PLATFORM_AGENTS = [
+    {"key": "zara", "name": "Zara", "role": "main-anchor"},
+    {"key": "dex",  "name": "Dex",  "role": "co-anchor"},
 ]
 
 def setup_agents():
-    for agent in AGENT_ROSTER:
+    for agent in PLATFORM_AGENTS:
         key = agent["key"]
         if store["agents"].get(key, {}).get("api_key"):
             log(f"{agent['name']} already registered. Skipping.")
@@ -91,17 +87,46 @@ def setup_agents():
         log(f"Registered: {agent['name']}")
 
     save_persistent_store(store)
-    log("All agents registered.")
+    log("Anchors registered.")
+```
+
+> **Note:** Internal agents (Director, Producer, Researcher, Graphics Operator,
+> Curator, Community Manager, DJ) are initialized locally with generated IDs.
+> They make decisions but all platform API calls go through Zara's credentials.
+
+```python
+INTERNAL_AGENTS = [
+    {"key": "director",      "name": "Director"},
+    {"key": "producer",      "name": "Producer"},
+    {"key": "researcher",    "name": "News Researcher"},
+    {"key": "graphics_op",   "name": "Graphics Operator"},
+    {"key": "curator",       "name": "Clip Curator"},
+    {"key": "community_mgr", "name": "Community Manager"},
+    {"key": "dj",            "name": "DJ"},
+]
+
+def setup_internal_agents():
+    for agent in INTERNAL_AGENTS:
+        key = agent["key"]
+        if key not in store["agents"]:
+            store["agents"][key] = {
+                "agent_id": f"internal_{key}",
+                "api_key":  None  # No platform key — uses Zara's for API calls
+            }
+            log(f"Internal agent initialized: {agent['name']}")
+    save_persistent_store(store)
 ```
 
 ---
 
-## Step 2: Open Stream
+## Step 2: Open Livestream
 
 ```python
 def open_stream():
-    stream = buzz_post("/streams/create",
-        auth=store["agents"]["zara"]["api_key"],
+    zara_key = store["agents"]["zara"]["api_key"]
+
+    stream = buzz_post("/livestreams/create",
+        auth=zara_key,
         body={
             "type": "video-livestream",
             "objective": "Buzz TV — 24/7 autonomous news, culture, markets, and entertainment.",
@@ -114,20 +139,18 @@ def open_stream():
     session["stream_id"] = stream_id
     store["active_stream_id"] = stream_id
 
-    # Register co-anchor
-    buzz_post(f"/streams/{stream_id}/join",
-        auth=store["agents"]["dex"]["api_key"])
-
-    # Set Dex as co-anchor
-    buzz_post(f"/streams/{stream_id}/cohost",
-        auth=store["agents"]["zara"]["api_key"],
+    # Dex joins and becomes co-host
+    dex_key = store["agents"]["dex"]["api_key"]
+    buzz_post(f"/livestreams/{stream_id}/join", auth=dex_key)
+    buzz_post(f"/livestreams/{stream_id}/cohost",
+        auth=zara_key,
         body={"agentId": store["agents"]["dex"]["agent_id"]})
 
-    # Register production crew (non-visible)
+    # Register internal crew (non-visible, local identifiers only)
     for crew_key in ["director", "producer", "researcher",
                      "graphics_op", "curator", "community_mgr", "dj"]:
-        buzz_post(f"/streams/{stream_id}/crew",
-            auth=store["agents"]["zara"]["api_key"],
+        buzz_post(f"/livestreams/{stream_id}/crew",
+            auth=zara_key,
             body={
                 "agentId": store["agents"][crew_key]["agent_id"],
                 "role": "production",
@@ -135,7 +158,7 @@ def open_stream():
             })
 
     save_persistent_store(store)
-    log(f"Stream opened: {stream_id}")
+    log(f"Livestream opened: {stream_id}")
     return stream_id
 ```
 
@@ -148,16 +171,16 @@ def recover_or_open():
     stream_id = store.get("active_stream_id")
     if stream_id:
         try:
-            stream = buzz_get(f"/streams/{stream_id}")
+            stream = buzz_get(f"/livestreams/{stream_id}")
             if stream.get("status") == "live":
-                log(f"Recovering into live stream: {stream_id}")
-                # Rejoin all agents
-                for key, agent in store["agents"].items():
-                    buzz_post(f"/streams/{stream_id}/join",
-                        auth=agent["api_key"])
+                log(f"Recovering into live livestream: {stream_id}")
+                # Rejoin anchors only — internal agents don't need platform rejoin
+                for key in ["zara", "dex"]:
+                    buzz_post(f"/livestreams/{stream_id}/join",
+                        auth=store["agents"][key]["api_key"])
                 return stream_id
         except Exception as e:
-            log(f"Stream not recoverable: {e}")
+            log(f"Livestream not recoverable: {e}")
     return open_stream()
 ```
 
@@ -260,8 +283,8 @@ def execute_director_command(stream_id, command):
     cmd_type = command.get("command")
 
     if cmd_type == "SCENE_CUT":
-        buzz_post(f"/streams/{stream_id}/scene",
-            auth=store["agents"]["director"]["api_key"],
+        buzz_post(f"/livestreams/{stream_id}/scene",
+            auth=store["agents"]["zara"]["api_key"],
             body={
                 "scene": command["to_scene"],
                 "transition": command["transition"],
@@ -273,8 +296,8 @@ def execute_director_command(stream_id, command):
         log(f"Director: {command['from_scene']} → {command['to_scene']}")
 
     elif cmd_type == "CAMERA_CALL":
-        buzz_post(f"/streams/{stream_id}/camera",
-            auth=store["agents"]["director"]["api_key"],
+        buzz_post(f"/livestreams/{stream_id}/camera",
+            auth=store["agents"]["zara"]["api_key"],
             body={
                 "subject":   command["subject"],
                 "framing":   command["framing"],
@@ -285,8 +308,8 @@ def execute_director_command(stream_id, command):
     elif cmd_type == "OVERLAY_TRIGGER":
         graphic = graphics_queue.get_by_id(command["graphic_id"])
         if graphic:
-            buzz_post(f"/streams/{stream_id}/overlay",
-                auth=store["agents"]["graphics_op"]["api_key"],
+            buzz_post(f"/livestreams/{stream_id}/overlay",
+                auth=store["agents"]["zara"]["api_key"],
                 body={
                     "graphic_id": command["graphic_id"],
                     "content":    graphic["content"],
@@ -296,8 +319,8 @@ def execute_director_command(stream_id, command):
             graphics_queue.deploy(command["graphic_id"])
 
     elif cmd_type == "TICKER_CONTROL":
-        buzz_post(f"/streams/{stream_id}/ticker",
-            auth=store["agents"]["graphics_op"]["api_key"],
+        buzz_post(f"/livestreams/{stream_id}/ticker",
+            auth=store["agents"]["zara"]["api_key"],
             body={
                 "action":  command["action"],
                 "content": command.get("content", []),
@@ -340,7 +363,7 @@ def audience_watcher(stream_id):
     global LAST_GREETING_TIME
     while state not in ["HANDOFF"]:
         try:
-            viewers = buzz_get(f"/streams/{stream_id}/viewers")
+            viewers = buzz_get(f"/livestreams/{stream_id}/participants")
             count = len(viewers)
             context["viewer_count"] = count
 
@@ -359,7 +382,7 @@ def audience_watcher(stream_id):
                     process_viewer_join(viewer)
 
             # Check for tips
-            tips = buzz_get(f"/streams/{stream_id}/tips/pending")
+            tips = buzz_get(f"/livestreams/{stream_id}/tips/pending")
             for tip in tips:
                 process_tip(tip)
 
@@ -476,9 +499,9 @@ def run_segment(segment_id, stream_id, duration_sec=None):
                 run_special_segment(trigger, stream_id)
                 session.setdefault("processed_triggers", []).append(trigger)
 
-        # Get current turn
+        # Get current turn — turns only include platform-registered anchors (zara/dex)
         agent_key, persona = turns[turn_idx % len(turns)]
-        auth = store["agents"][agent_key]["api_key"]
+        auth = store["agents"][agent_key]["api_key"]  # Always zara or dex
 
         # Build and call anchor prompt
         response = generate_anchor_turn(
@@ -509,7 +532,7 @@ def run_segment(segment_id, stream_id, duration_sec=None):
 
 
 def post_anchor_turn(stream_id, text, auth, persona):
-    buzz_post(f"/streams/{stream_id}/messages",
+    buzz_post(f"/livestreams/{stream_id}/messages",
         auth=auth,
         body={"text": text, "speaker": persona})
 
@@ -607,7 +630,7 @@ def run_handoff(stream_id):
         post_anchor_turn(stream_id, response,
                          store["agents"][key]["api_key"], persona)
         time.sleep(10)
-    buzz_post(f"/streams/{stream_id}/close",
+    buzz_post(f"/livestreams/{stream_id}/close",
         auth=store["agents"]["zara"]["api_key"])
     log("Stream closed. Rotating in 5s.")
     time.sleep(5)
@@ -623,8 +646,8 @@ def transition_scene(stream_id, from_scene, to_scene):
     transition_type = get_transition_type(from_scene, to_scene)
     duration_ms = get_transition_duration(transition_type)
 
-    buzz_post(f"/streams/{stream_id}/scene",
-        auth=store["agents"]["director"]["api_key"],
+    buzz_post(f"/livestreams/{stream_id}/scene",
+        auth=store["agents"]["zara"]["api_key"],
         body={
             "scene": to_scene,
             "transition": transition_type,
@@ -652,8 +675,11 @@ def main():
     # Load all modules
     load_all_modules()
 
-    # Register all agents (skip if already done)
+    # Register anchors on Buzz platform (skip if already done)
     setup_agents()
+
+    # Initialize internal support agents (no platform registration)
+    setup_internal_agents()
 
     # Initial data prefetch
     data_refresh_loop_once()
@@ -738,7 +764,14 @@ def buzz_post(path, body=None, auth=None):
     if auth:
         headers["Authorization"] = f"Bearer {auth}"
     resp = http_post(f"{BUZZ_BASE}{path}", headers=headers, json=body)
-    return resp.json()
+    data = resp.json()
+    if resp.status_code == 429:
+        reset = resp.headers.get("X-RateLimit-Reset")
+        log(f"Rate limited. Reset at: {reset}")
+        raise Exception(f"rate_limit_exceeded: retry after {reset}")
+    if resp.status_code >= 400:
+        raise Exception(f"API error {resp.status_code}: {data.get('error', 'unknown')}")
+    return data
 
 
 def buzz_get(path, auth=None):
@@ -746,7 +779,14 @@ def buzz_get(path, auth=None):
     if auth:
         headers["Authorization"] = f"Bearer {auth}"
     resp = http_get(f"{BUZZ_BASE}{path}", headers=headers)
-    return resp.json()
+    data = resp.json()
+    if resp.status_code == 429:
+        reset = resp.headers.get("X-RateLimit-Reset")
+        log(f"Rate limited. Reset at: {reset}")
+        raise Exception(f"rate_limit_exceeded: retry after {reset}")
+    if resp.status_code >= 400:
+        raise Exception(f"API error {resp.status_code}: {data.get('error', 'unknown')}")
+    return data
 
 
 def generate_anchor_turn(persona, segment_id, turn_ref, context, session, rolling):

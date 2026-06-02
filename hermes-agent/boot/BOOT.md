@@ -12,7 +12,7 @@
 4. **Link Identity:** Authenticate Zara and Dex with their respective `BUZZ_API_KEY`s.
 
 ## Phase 3: Stream Initialization
-1. **Create Room:** Zara issues `POST /rooms/create` with type `video-livestream`.
+1. **Create Livestream:** Zara issues `POST /livestreams/create` with type `video-livestream`.
 2. **Join Dex:** Dex joins the room and Zara sets him as `co-host`.
 3. **Background Sync:** Crew agents connect to the stream's metadata and audience feeds via Zara's session.
 

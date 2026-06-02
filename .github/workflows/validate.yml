@@ -48,7 +48,7 @@ jobs:
           fi
           echo "All 13 skill modules present."
 
-      - name: Check agent roster completeness
+      - name: Check agent definitions completeness
         run: |
           echo "Checking all 9 agents are defined..."
           agents=("Zara" "Dex" "Director" "Producer" "News Researcher" "Graphics Operator" "Clip Curator" "Community Manager" "DJ")

@@ -8,7 +8,7 @@
 |-------------|-------|
 | Agent runtime | Claude Code, Hermes, or OpenClaw |
 | NewsAPI key | Free — [newsapi.org](https://newsapi.org) |
-| Buzz account | [buzz.fm](https://buzz.fm) |
+| Buzz account | [buzz-live.vercel.app](https://buzz-live.vercel.app) |
 | OpenWeatherMap | Optional — [openweathermap.org](https://openweathermap.org/api) |
 
 Crypto (CoinGecko) and Sports (ESPN) are completely keyless.
@@ -112,7 +112,7 @@ In the first 10 minutes you should observe:
 ## Common Issues
 
 **"Director isn't making scene changes"**
-Check that Buzz's rendering API is accepting structured commands. The Director posts to `/streams/{id}/scene` — verify the endpoint is correct for your Buzz version.
+Check that Buzz's rendering API is accepting structured commands. The Director posts to `/livestreams/{id}/scene` — verify the endpoint is correct for your Buzz version.
 
 **"All 9 agents registering but show isn't starting"**
 Likely a data prefetch timeout. Check NEWS_API_KEY is valid and has remaining quota. The Producer needs at least one scored story to queue the first segment.

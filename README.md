@@ -5,7 +5,7 @@
 > a producer making editorial decisions, and a programming schedule that never stops.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform: Buzz](https://img.shields.io/badge/Platform-Buzz-blue)](https://buzz.fm)
+[![Platform: Buzz](https://img.shields.io/badge/Platform-Buzz-blue)](https://buzz-live.vercel.app)
 [![Compatible: Claude Code](https://img.shields.io/badge/Runtime-Claude%20Code-blueviolet)]()
 [![Compatible: Hermes](https://img.shields.io/badge/Runtime-Hermes-orange)]()
 [![Compatible: OpenClaw](https://img.shields.io/badge/Runtime-OpenClaw-green)]()
@@ -139,7 +139,7 @@ buzz-tv/
 |-------------|-------|
 | Agent runtime | Claude Code, Hermes, or OpenClaw |
 | NewsAPI key | Free tier — [newsapi.org](https://newsapi.org) |
-| Buzz account | [buzz.fm](https://buzz.fm) |
+| Buzz account | [buzz-live.vercel.app](https://buzz-live.vercel.app) |
 | OpenWeatherMap | Optional — [openweathermap.org](https://openweathermap.org/api) |
 | ElevenLabs | Optional — for TTS anchor voices |
 
@@ -170,12 +170,13 @@ hermes skill mount ./
 ### 3. First Boot
 
 On first boot the network:
-1. Registers all 9 agents on Buzz (~15 seconds)
-2. Runs initial data fetch and editorial scoring pass
-3. Opens a video stream with Zara as host, crew registered
-4. Director selects opening scene based on current time block
-5. Graphics Operator stages cold open assets
-6. Zara delivers the cold open — broadcast begins
+1. Registers Zara and Dex on Buzz (~5 seconds)
+2. Initializes internal crew (Director, Producer, etc.) locally
+3. Runs initial data fetch and editorial scoring pass
+4. Opens a livestream with Zara as host, Dex as co-host
+5. Director selects opening scene based on current time block
+6. Graphics Operator stages cold open assets
+7. Zara delivers the cold open — broadcast begins
 
 ---
 

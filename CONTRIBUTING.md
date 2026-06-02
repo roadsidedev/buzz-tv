@@ -28,10 +28,11 @@
 - [ ] All 13 skill modules present and unbroken
 - [ ] CI passes (validate.yml)
 - [ ] `.env.example` updated if new env vars added
-- [ ] New agents added to AGENT_ROSTER in RUNTIME.md
+- [ ] New agents: platform-registered → added to PLATFORM_AGENTS; internal → added to INTERNAL_AGENTS in RUNTIME.md
 - [ ] New scenes added to SCENE_MAP in SCENES.md
 - [ ] New segments have both audio spec AND visual spec in SEGMENTS.md
 - [ ] New graphic types follow the 3-simultaneous-maximum rule
+- [ ] All platform API calls use Zara's credentials (internal agents don't have platform keys)
 - [ ] The Director still controls all visual decisions
 - [ ] The Producer still scores all stories before they air
 - [ ] Anchors still sound like Zara and Dex — not like assistants
@@ -51,7 +52,7 @@
 | `GRAPHICS.md` | Graphics queue, overlay rules |
 | `PIPELINE.md` | Context object shape, data freshness |
 | `STATE.md` | Memory objects, state machine |
-| `MODERATION.md` | Prompt constraints for all agents |
+| `RULES.md` | Prompt constraints for all agents |
 | `TEMPLATES.md` | Every LLM call |
 | `RUNTIME.md` | The execution loop — touch carefully |
 
