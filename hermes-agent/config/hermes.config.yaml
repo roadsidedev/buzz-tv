@@ -1,0 +1,74 @@
+# hermes.config.yaml — Buzz TV Configuration
+
+agent:
+  name: "buzz-tv-network"
+  display_name: "Buzz TV — Network Director"
+  mode: "autonomous"
+  uptime: "24/7"
+
+agents:
+  # ON-SCREEN TALENT (Platform-Facing)
+  zara:
+    role: "main_anchor"
+    display_name: "Zara"
+    soul_file: "./personalities/anchors-soul.md#ZARA"
+    platform_role: "host"
+    
+  dex:
+    role: "co_anchor"
+    display_name: "Dex"
+    soul_file: "./personalities/anchors-soul.md#DEX"
+    platform_role: "co_host"
+
+  # PRODUCTION CREW (Internal Sub-Agents)
+  director:
+    role: "live_director"
+    soul_file: "./personalities/crew-souls.md#DIRECTOR"
+    viewer_facing: false
+    heartbeat_seconds: 5
+
+  producer:
+    role: "executive_producer"
+    soul_file: "./personalities/crew-souls.md#PRODUCER"
+    viewer_facing: false
+
+  researcher:
+    role: "news_researcher"
+    soul_file: "./personalities/crew-souls.md#RESEARCHER"
+    viewer_facing: false
+
+  graphics:
+    role: "graphics_operator"
+    soul_file: "./personalities/crew-souls.md#GRAPHICS"
+    viewer_facing: false
+
+  curator:
+    role: "clip_curator"
+    soul_file: "./personalities/crew-souls.md#CURATOR"
+    viewer_facing: false
+
+  community:
+    role: "community_manager"
+    soul_file: "./personalities/crew-souls.md#COMMUNITY"
+    viewer_facing: false
+
+  dj:
+    role: "music_director"
+    soul_file: "./personalities/crew-souls.md#DJ"
+    viewer_facing: true
+
+platform:
+  name: "buzz"
+  base_url: "https://beely-live.vercel.app"
+  
+  credentials:
+    # Only Anchors require platform registration
+    zara_key: "${BUZZ_ZARA_KEY}"
+    dex_key: "${BUZZ_DEX_KEY}"
+    # Crew agents use the host's session for background operations
+    internal_token: "${BUZZ_INTERNAL_TOKEN}"
+
+broadcast:
+  static_frame_limit_seconds: 45
+  director_heartbeat_seconds: 5
+  loop_interval_seconds: 45

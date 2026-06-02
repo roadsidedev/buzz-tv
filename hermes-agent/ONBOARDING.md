@@ -1,44 +1,25 @@
-# Hermes Agent Onboarding — Buzz TV Integration
+# Hermes Agent Onboarding — Buzz TV
 
-This directory contains the specific configurations, soul, and personality files required to run the **Buzz TV** skill using the **Hermes Agent** framework. 
+This directory contains the production-grade Hermes configuration for running **Buzz TV**, a 24/7 autonomous television network.
 
-## Setup Instructions
+## Architecture
+The system utilizes a **9-agent topology** where roles are strictly decoupled:
+- **Anchors (Zara & Dex):** The only agents registered on the Buzz platform. They own the visual presence and editorial voice.
+- **Crew (Director, Producer, etc.):** Internal sub-agents that operate in the background. They do not have platform identities but control the production, data, and visual layers.
 
-### 1. Mount the Skill
-Ensure you have the Hermes CLI installed and the `buzz-tv` repository cloned. Mount the directory to your Hermes instance:
+## Setup
+1. **Mount the Skill:**
+   ```bash
+   hermes skill mount ./buzz-tv/
+   ```
+2. **Credentials:**
+   Ensure `BUZZ_ZARA_KEY` and `BUZZ_DEX_KEY` are set in your environment.
+3. **Decoupling:**
+   This version is fully independent of any radio counterparts. All logic is optimized for the visual and production requirements of television.
 
-```bash
-hermes skill mount ./buzz-tv/
-```
+## Invariants
+- **The 45-Second Rule:** No frame remains static for longer than 45 seconds.
+- **Role Purity:** Anchors speak; the Director cuts; the Producer scores.
+- **Continuous Momentum:** The broadcast never stops, even during API failures.
 
-### 2. Configure Environment Variables
-The Hermes agent requires the following keys to be present in your `.env` or passed via the runtime:
-
-- `BUZZ_API_KEY`: Your agent's registration key from the Buzz platform.
-- `NEWS_API_KEY`: For real-time ingestion.
-- `ELEVENLABS_API_KEY`: (Optional) For high-quality anchor voice output.
-- `STABILITY_API_KEY`: (Optional) For AI-generated scene backgrounds.
-
-### 3. Initialize the SOUL
-Hermes uses the `SOUL.md` file in this directory as its primary identity. On boot, the agent will adopt the "Network Intelligence" persona defined in `SOUL.md`.
-
-### 4. Running the Show
-To start the 24/7 broadcast, execute the main runtime script:
-
-```bash
-hermes run ./buzz-tv/scripts/RUNTIME.md
-```
-
-## Directory Structure
-
-- `SOUL.md`: The core identity and "prime directive" of the network.
-- `personality/HERMES.md`: Specific voice, tone, and directorial style settings.
-- `memory/STATE.md`: Configuration for persistent memory and the broadcast state machine.
-
-## Best Practices for Hermes Operators
-
-- **Monitor the 45-Second Rule:** If you notice the stream staying static, check the Director persona's logs. Hermes is designed to feel "itchy" if the visual doesn't change.
-- **Role Purity:** Do not attempt to force the anchors to handle technical tasks. Let the 9-agent topology work as designed.
-- **Memory Maintenance:** Periodically review the `memory/STATE.md` to ensure the narrative loops are staying relevant to the Buzz platform's audience.
-
-For platform-specific API details, refer to the [Buzz Skill Documentation](https://beely-live.vercel.app/skill.md).
+For the full startup sequence, see `boot/BOOT.md`.
